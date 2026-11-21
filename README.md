@@ -18,8 +18,21 @@ The constructor of class `Wifi` has three parameters:
 To use the WifiManager component you have to include "wifi_manager.hpp".
 
 To establish a Wifi connection you have to define an instance of class Wifi.
-The constructor will establish the connection and return only after the Wifi is connected.
-If no useable credentials are found in NVS_FLASH storage, a configuration access point is started at ```http://192.168.4.1``` where the ssid and the passwort can be given.
+
+The constructor does the following:
+
+If credentials are found in NVS flash storage, the constructor tries to establish a connection to the WLAN, if not it starts configuration mode.
+
+If the connection can not be established in 30 seconds, configuration mode is started as well.
+
+In configuration mode, a configuration access point is started at ```http://192.168.4.1``` where the ssid and the passwort can be given.
+
+The given credentials are stored in NVS flash storage.
+
+If no configuration data is entered after 2 minutes, the constructor returns without a WiFi connection. 
+Otherwise it tries to establish a connection to the WLAN.
+
+If the station is not started after 30 seconds, the constructor returns without a WLAN connection.
 
 Ssid, IpAddress, Rssi, Channel and MacAddress can be retrieved by Getters.
 

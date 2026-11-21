@@ -85,48 +85,72 @@ Wifi::Wifi( std::string tag,
     #endif // LED_ACTIVE
         // No credentials saved, start config AP mode
         startConfigurationAp = true;
-        wifiManager.StartConfigAp();
     } else {
         // Try to connect to the saved Wi-Fi network
         startStation = true;
-        wifiManager.StartStation();
     }
 
     // hier muss wifiManager.StartConfigAp bzw StartStation aufgerufen werden
     ESP_LOGI(tag.c_str(), "startConfigurationAp=%s startStation=%s", startConfigurationAp ? "true":"false", startStation ? "true":"false");
 
     if (startStation == true) {
-        // if not connected to station after 20 seconds enter Wifi configuration mode
+        wifiManager.StartStation();
+        // if not connected to station after 30 seconds enter Wifi configuration mode
         for (int i=30;i>0;i--) {
             if (wifiManager.IsConnected()) {
+                startStation = false;
+                ESP_LOGI(tag.c_str(), "Wifi station is connected");
                 break;
             }
-            ESP_LOGI(tag.c_str(), "wait (max. 30 seconds) until Wifi station is connected");
+            //ESP_LOGI(tag.c_str(), "wait (max. 30 seconds) until Wifi station is connected");
             // 1 Sekunde warten
             vTaskDelay(pdMS_TO_TICKS(1000));
         }
 
-        if (!wifiManager.IsConnected()) {
+        if (startStation == true) {
             startStation = false;
             startConfigurationAp = true;
-            ESP_LOGI(tag.c_str(), "Wifi station is not started -> start Wifi configuration");
-            wifiManager.StartConfigAp();
+            ESP_LOGI(tag.c_str(), "Wifi station was not started after 30 seconds -> start Wifi configuration");
         }
     }
 
-    if (startStation == false) {
-        while(wifiManager.IsConfigMode()) {
-            ESP_LOGI(tag.c_str(), "wait until Wifi configuration is finished");
+    if (startConfigurationAp == true) {
+        wifiManager.StartConfigAp();
+        for(int i=120;i>0;i--) {
+            if (!wifiManager.IsConfigMode()) {
+                startConfigurationAp = false;
+                startStation = true;
+                break;
+            }
+            //ESP_LOGI(tag.c_str(), "wait (max. 2 minutes) until Wifi configuration is finished");
+            // 1 Sekunde warten
             vTaskDelay(pdMS_TO_TICKS(1000));
         }
 
+        if(startConfigurationAp == true) {
+            // if ConfigMode is still active after 2 minutes ...
+            startConfigurationAp = false;
+            startStation = false;
+            ESP_LOGI(tag.c_str(), "WiFi Configuration timeout (after 2 minutes) -> WiFI is not connected!");
+        }
+    }
+
+    if(startStation == true) {
         wifiManager.StartStation();
-        while(!wifiManager.IsConnected()) {
-            ESP_LOGI(tag.c_str(), "wait until Wifi station is connected");
+        for (int i=30;i>0;i--) {
+            if (wifiManager.IsConnected()) {
+                startStation = false;
+                ESP_LOGI(tag.c_str(), "Wifi station is connected");
+                break;
+            }
+            ESP_LOGI(tag.c_str(), "wait (max. 30 seconds) until Wifi station is connected");
             vTaskDelay(pdMS_TO_TICKS(1000));
         }
+        if(startStation == true) {
+            startStation = false;
+            ESP_LOGI(tag.c_str(), "Wifi Station timeout -> Wifi is not connected");
+        }
     }
-    ESP_LOGI(tag.c_str(), "Wifi station is connected");
 }
 
 Wifi::~Wifi() {}
